@@ -1,0 +1,5 @@
+{
+  "name": "MahjongStats PWA",
+  "description": "A mobile-first Mahjong score tracker and dashboard using React and Tailwind CSS.",
+  "requestFramePermissions": []
+}
