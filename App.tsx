@@ -243,7 +243,7 @@ const App: React.FC = () => {
           />
           <StatCard 
             label="今月の平均持ち点" 
-            value={currentAvgScore.toLocaleString()} 
+            value={Math.floor(currentAvgScore).toLocaleString()} 
             subValue={getComparison(currentAvgScore, prevAvgScore, 'score')}
             trend={getTrend(currentAvgScore, prevAvgScore, 'score')}
             icon={<TrendingUp size={18} />}
@@ -260,7 +260,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Chart */}
-        <RankChart stats={currentStats} />
+        <RankChart stats={currentStats} prevStats={prevStats} />
 
         {/* Recent History */}
         <RecentGames games={games.slice(0, 5)} />

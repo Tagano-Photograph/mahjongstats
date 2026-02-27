@@ -8,10 +8,10 @@ interface AnalysisProps {
   games: GameLog[];
 }
 
-type BenchmarkType = 'PRO' | 'AMATEUR' | 'PAST';
+type BenchmarkType = 'AMATEUR' | 'PAST';
 
 export const Analysis: React.FC<AnalysisProps> = ({ games }) => {
-  const [benchmark, setBenchmark] = useState<BenchmarkType>('PRO');
+  const [benchmark, setBenchmark] = useState<BenchmarkType>('AMATEUR');
 
   // Calculate User Stats
   const userStats = useMemo(() => calculateAnalysisStats(games), [games]);
@@ -46,10 +46,9 @@ export const Analysis: React.FC<AnalysisProps> = ({ games }) => {
   };
 
   const getDeviationColor = (score: number) => {
-    if (score >= 70) return 'text-pink-600 bg-pink-50 border-pink-100';
     if (score >= 60) return 'text-emerald-600 bg-emerald-50 border-emerald-100';
     if (score >= 40) return 'text-slate-700 bg-slate-50 border-slate-100';
-    return 'text-blue-600 bg-blue-50 border-blue-100';
+    return 'text-red-600 bg-red-50 border-red-100';
   };
 
   const StatBox = ({ label, score, icon, desc }: { label: string, score: number, icon: React.ReactNode, desc: string }) => (
@@ -70,7 +69,7 @@ export const Analysis: React.FC<AnalysisProps> = ({ games }) => {
 
       {/* Benchmark Toggle */}
       <div className="bg-slate-100 p-1 rounded-lg flex text-xs font-bold">
-        {(['PRO', 'AMATEUR', 'PAST'] as BenchmarkType[]).map((type) => (
+        {(['AMATEUR', 'PAST'] as BenchmarkType[]).map((type) => (
           <button
             key={type}
             onClick={() => setBenchmark(type)}
@@ -80,7 +79,6 @@ export const Analysis: React.FC<AnalysisProps> = ({ games }) => {
                 : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            {type === 'PRO' && 'VS プロ平均'}
             {type === 'AMATEUR' && 'VS ユーザー平均'}
             {type === 'PAST' && 'VS 過去の自分'}
           </button>
@@ -164,7 +162,7 @@ export const Analysis: React.FC<AnalysisProps> = ({ games }) => {
                 label="運/粘り" 
                 score={userStats.scores.luck} 
                 icon={<Clover size={20} />}
-                desc={`焼鳥率: ${userStats.raw.yakitoriRate.toFixed(1)}%`}
+                desc={`4万点超: ${userStats.raw.highScoreCount}回`}
              />
              <div className="p-3 rounded-xl border border-dashed border-slate-200 flex flex-col items-center justify-center text-center bg-slate-50/50">
                  <div className="text-xs text-slate-400 font-bold">総合評価</div>
