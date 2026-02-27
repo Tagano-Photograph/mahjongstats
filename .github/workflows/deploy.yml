@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   workflow_dispatch: {}
 
 permissions:
@@ -18,25 +18,56 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout main (prod)
         uses: actions/checkout@v4
+        with:
+          ref: main
+          path: prod
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
+          cache-dependency-path: prod/package-lock.json
 
-      - name: Install dependencies
+      - name: Install dependencies (prod)
+        working-directory: prod
         run: npm ci
 
-      - name: Build
+      - name: Build prod
+        working-directory: prod
+        env:
+          VITE_DEPLOY_ENV: prod
         run: npm run build
+
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          path: dev
+
+      - name: Install dependencies (develop)
+        working-directory: dev
+        run: npm ci
+
+      - name: Build develop
+        working-directory: dev
+        env:
+          VITE_DEPLOY_ENV: develop
+        run: npm run build
+
+      - name: Prepare combined dist
+        run: |
+          mkdir combined-dist
+          cp -r prod/dist/* combined-dist/
+          mkdir -p combined-dist/develop
+          cp -r dev/dist/* combined-dist/develop/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: combined-dist
 
   deploy:
     needs: build
