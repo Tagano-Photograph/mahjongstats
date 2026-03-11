@@ -39,6 +39,7 @@ const RECENT_OPPONENTS = [
 interface Opponent {
   id: string;
   name: string;
+  score: string;
 }
 
 // ---- Sub-components ----
@@ -46,8 +47,10 @@ interface Opponent {
 interface SortableOpponentItemProps {
   id: string; 
   name: string; 
+  score: string;
   wind: string; 
   onChange: (val: string) => void;
+  onScoreChange: (val: string) => void;
   onClear: () => void;
   hasError?: boolean;
 }
@@ -56,8 +59,10 @@ interface SortableOpponentItemProps {
 const SortableOpponentItem: React.FC<SortableOpponentItemProps> = ({ 
   id, 
   name, 
+  score,
   wind, 
   onChange, 
+  onScoreChange,
   onClear,
   hasError
 }) => {
@@ -82,14 +87,26 @@ const SortableOpponentItem: React.FC<SortableOpponentItemProps> = ({
       <div className="w-8 h-8 flex items-center justify-center rounded bg-slate-200 text-slate-700 font-bold text-sm shrink-0">
         {wind}
       </div>
-      <input
-        type="text"
-        list="opponent-suggestions"
-        value={name}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="名前を入力"
-        className="flex-1 bg-white border border-slate-200 rounded px-3 py-2 text-sm focus:border-mahjong-green focus:ring-0 outline-none"
-      />
+      <div className="flex-1 min-w-0 flex gap-2">
+        <input
+          type="text"
+          list="opponent-suggestions"
+          value={name}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="名前"
+          className="flex-1 min-w-0 bg-white border border-slate-200 rounded px-3 py-2 text-sm focus:border-mahjong-green focus:ring-0 outline-none"
+        />
+        <div className="relative w-24 shrink-0">
+          <input
+            type="number"
+            value={score}
+            onChange={(e) => onScoreChange(e.target.value)}
+            placeholder="点数"
+            className="w-full bg-white border border-slate-200 rounded px-2 py-2 pr-6 text-sm text-right focus:border-mahjong-green focus:ring-0 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">点</span>
+        </div>
+      </div>
       <button 
         onClick={onClear}
         className="p-2 text-slate-400 hover:text-red-500 transition-colors"
@@ -114,6 +131,7 @@ export const AddGameForm: React.FC<AddGameFormProps> = ({ onSubmit }) => {
 
   // Game State
   const [position, setPosition] = useState<string>('東');
+  const [rank, setRank] = useState<1 | 2 | 3 | 4 | null>(null);
   const [score, setScore] = useState<string>('');
   const [dealIns, setDealIns] = useState<number>(0);
   const [isYakitori, setIsYakitori] = useState<boolean>(false);
@@ -121,9 +139,9 @@ export const AddGameForm: React.FC<AddGameFormProps> = ({ onSubmit }) => {
   
   // Opponents State (with stable IDs for DnD)
   const [opponents, setOpponents] = useState<Opponent[]>([
-    { id: 'op-1', name: '' },
-    { id: 'op-2', name: '' },
-    { id: 'op-3', name: '' },
+    { id: 'op-1', name: '', score: '' },
+    { id: 'op-2', name: '', score: '' },
+    { id: 'op-3', name: '', score: '' },
   ]);
 
   // DnD Sensors
@@ -157,8 +175,13 @@ export const AddGameForm: React.FC<AddGameFormProps> = ({ onSubmit }) => {
     }
   };
 
+  const handleOpponentScoreChange = (id: string, newScore: string) => {
+    setOpponents(prev => prev.map(op => op.id === id ? { ...op, score: newScore } : op));
+  };
+
   const handleOpponentClear = (id: string) => {
     handleOpponentChange(id, '');
+    handleOpponentScoreChange(id, '');
   };
 
   const handleQuickFill = () => {
@@ -171,7 +194,7 @@ export const AddGameForm: React.FC<AddGameFormProps> = ({ onSubmit }) => {
   };
 
   const handleClearAll = () => {
-    setOpponents(prev => prev.map(op => ({ ...op, name: '' })));
+    setOpponents(prev => prev.map(op => ({ ...op, name: '', score: '' })));
   };
 
   // Validation Logic
@@ -187,6 +210,7 @@ export const AddGameForm: React.FC<AddGameFormProps> = ({ onSubmit }) => {
 
   const validateGame = () => {
     const newErrors: {[key: string]: string} = {};
+    if (!rank) newErrors.rank = '順位を選択してください';
     if (!score) newErrors.score = '点数を入力してください';
     
     const emptyOpponent = opponents.some(op => !op.name.trim());
@@ -212,21 +236,28 @@ export const AddGameForm: React.FC<AddGameFormProps> = ({ onSubmit }) => {
         session: { date, location, rule },
         game: {
           position,
+          rank,
           score: parseInt(score) || 0,
           dealIns,
           isYakitori,
           opponents: opponents.map(op => op.name),
+          opponentDetails: opponents.map(op => ({
+            name: op.name,
+            score: parseInt(op.score) || 0
+          })),
           notes
         }
       }, isFinished);
 
       // 2. If continuing, reset specific fields
       if (!isFinished) {
+        setRank(null);
         setScore('');
         setDealIns(0);
         setIsYakitori(false);
         setNotes('');
-        // Keep opponents, location, date, rule
+        // Keep opponents names, reset scores
+        setOpponents(prev => prev.map(op => ({ ...op, score: '' })));
         
         // Scroll to top by targeting the scrollable container in Layout
         const mainContainer = document.getElementById('main-scroll-container');
@@ -422,8 +453,10 @@ export const AddGameForm: React.FC<AddGameFormProps> = ({ onSubmit }) => {
                   key={opponent.id}
                   id={opponent.id}
                   name={opponent.name}
+                  score={opponent.score}
                   wind={getOpponentWind(index)}
                   onChange={(val) => handleOpponentChange(opponent.id, val)}
+                  onScoreChange={(val) => handleOpponentScoreChange(opponent.id, val)}
                   onClear={() => handleOpponentClear(opponent.id)}
                   hasError={!!errors.opponents && !opponent.name.trim()}
                 />
@@ -433,24 +466,56 @@ export const AddGameForm: React.FC<AddGameFormProps> = ({ onSubmit }) => {
         </DndContext>
       </div>
 
-      {/* Score */}
-      <div className={`bg-white p-4 rounded-xl shadow-sm border ${errors.score ? 'border-red-300' : 'border-slate-100'}`}>
+      {/* Score & Rank */}
+      <div className={`bg-white p-4 rounded-xl shadow-sm border ${errors.score || errors.rank ? 'border-red-300' : 'border-slate-100'}`}>
         <label className="text-xs font-bold text-slate-500 uppercase mb-3 block flex items-center gap-1 justify-between">
-          <span className="flex items-center gap-1"><Target size={14} /> 点数</span>
-          {errors.score && <span className="text-red-500 text-[10px]">{errors.score}</span>}
+          <span className="flex items-center gap-1"><Target size={14} /> 点数と順位</span>
+          {(errors.score || errors.rank) && <span className="text-red-500 text-[10px]">{errors.score || errors.rank}</span>}
         </label>
-        <div className="relative">
-          <input
-            type="number"
-            value={score}
-            onChange={(e) => {
-              setScore(e.target.value);
-              if(errors.score) setErrors({...errors, score: ''});
-            }}
-            placeholder="30000"
-            className="w-full text-center text-3xl font-bold text-slate-800 bg-slate-50 border-2 border-slate-100 rounded-xl py-4 focus:border-mahjong-green focus:outline-none transition-colors placeholder:text-slate-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">点</span>
+        
+        <div className="flex flex-col gap-4">
+          {/* Rank Selection */}
+          <div className="grid grid-cols-4 gap-2">
+            {[1, 2, 3, 4].map((r) => (
+              <button
+                key={r}
+                onClick={() => {
+                  setRank(r as 1|2|3|4);
+                  if(errors.rank) {
+                    const newErrors = {...errors};
+                    delete newErrors.rank;
+                    setErrors(newErrors);
+                  }
+                }}
+                className={`h-10 rounded-lg font-bold text-sm transition-all ${
+                  rank === r
+                    ? 'bg-mahjong-green text-white shadow-md'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {r}着
+              </button>
+            ))}
+          </div>
+
+          {/* Score Input */}
+          <div className="relative">
+            <input
+              type="number"
+              value={score}
+              onChange={(e) => {
+                setScore(e.target.value);
+                if(errors.score) {
+                  const newErrors = {...errors};
+                  delete newErrors.score;
+                  setErrors(newErrors);
+                }
+              }}
+              placeholder="30000"
+              className="w-full text-center text-3xl font-bold text-slate-800 bg-slate-50 border-2 border-slate-100 rounded-xl py-4 focus:border-mahjong-green focus:outline-none transition-colors placeholder:text-slate-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">点</span>
+          </div>
         </div>
       </div>
 

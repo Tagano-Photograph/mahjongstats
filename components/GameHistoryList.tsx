@@ -39,12 +39,57 @@ export const GameHistoryList: React.FC<GameHistoryListProps> = ({ games }) => {
         
         const winds = ['東', '南', '西', '北'];
         const myIndex = winds.indexOf(game.position || '東');
+
+        // Prepare all players data for rank calculation
+        const myData = { name: '自分', score: game.score, isMe: true, wind: game.position || '東' };
+        
+        // Get opponents data
+        let opponentsData: { name: string; score?: number; isMe: boolean }[] = [];
+        if (game.opponentDetails && game.opponentDetails.length > 0) {
+            opponentsData = game.opponentDetails.map(d => ({ name: d.name, score: d.score, isMe: false }));
+        } else if (game.opponents) {
+            opponentsData = game.opponents.map(name => ({ name: name, score: undefined, isMe: false }));
+        }
+
+        // Calculate ranks if scores are available
+        const allPlayers = [myData, ...opponentsData];
+        // Sort by score descending to determine rank
+        // Only calculate rank if score is present
+        const sortedScores = allPlayers
+            .map(p => p.score)
+            .filter((s): s is number => s !== undefined)
+            .sort((a, b) => b - a);
         
         const seats = Array(4).fill(null).map((_, i) => {
             const wind = winds[i];
+            let player = null;
+            let rank: number | null = null;
+            let score: number | null = null;
             
             if (i === myIndex) {
-                return { wind, name: '自分', isMe: true };
+              player = myData;
+                rank = game.rank; // Use stored rank for self
+                score = game.score;
+            } else {
+                // Calculate opponent index relative to self
+                // Logic: seatIndex = (myIndex + 1 + opIndex) % 4
+                // Therefore: opIndex = (seatIndex - myIndex - 1 + 4) % 4
+                const opIdx = (i - myIndex - 1 + 4) % 4;
+                
+                if (opponentsData[opIdx]) {
+                    player = opponentsData[opIdx];
+                    score = player.score !== undefined ? player.score : null;
+                    
+                    // Calculate rank based on score if available
+                    if (score !== null) {
+                        // Rank is index in sorted scores + 1
+                        // Handle ties? Usually same rank or seat order. Simple approach:
+                        const rankIdx = sortedScores.indexOf(score);
+                        if (rankIdx !== -1) {
+                            rank = rankIdx + 1;
+                        }
+                    }
+                }
             }
             
             // Reverse mapping: find which opponent corresponds to this seat index i
@@ -55,7 +100,13 @@ export const GameHistoryList: React.FC<GameHistoryListProps> = ({ games }) => {
             if (game.opponents && opIdx >= 0 && opIdx < game.opponents.length) {
                 return { wind, name: game.opponents[opIdx], isMe: false };
             }
-            return { wind, name: 'ー', isMe: false };
+            return { 
+              wind, 
+              name: player ? player.name : 'ー', 
+              isMe: player ? player.isMe : false,
+              score: score,
+              rank: rank
+          };
         });
 
         return (
@@ -95,11 +146,34 @@ export const GameHistoryList: React.FC<GameHistoryListProps> = ({ games }) => {
                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">対局者・座順</label>
                    <div className="grid grid-cols-4 gap-2">
                      {seats.map((seat) => (
-                       <div key={seat.wind} className={`flex flex-col items-center p-2 rounded-lg border ${seat.isMe ? 'bg-white border-mahjong-green/30 shadow-sm' : 'bg-white border-slate-100'}`}>
-                         <span className={`text-[10px] font-bold mb-1 ${seat.isMe ? 'text-mahjong-green' : 'text-slate-400'}`}>{seat.wind}</span>
-                         <span className={`text-xs truncate w-full text-center font-medium ${seat.isMe ? 'text-slate-800' : 'text-slate-600'}`}>
-                            {seat.name}
-                         </span>
+                       <div key={seat.wind} className={`flex flex-col items-center p-2 rounded-lg border ${seat.isMe ? 'bg-white border-mahjong-green/30 shadow-sm' : 'bg-white border-slate-100'} min-h-[80px] justify-between`}>
+                        <div className="flex flex-col items-center w-full">
+                          <span className={`text-[10px] font-bold mb-0.5 ${seat.isMe ? 'text-mahjong-green' : 'text-slate-400'}`}>{seat.wind}</span>
+                          <span className={`text-xs truncate w-full text-center font-medium mb-1 ${seat.isMe ? 'text-slate-800' : 'text-slate-600'}`}>
+                              {seat.name}
+                          </span>
+                        </div>
+                        
+                        <div className="flex flex-col items-center w-full border-t border-slate-50 pt-1 mt-1">
+                            {seat.rank ? (
+                                <span className={`text-[10px] font-bold ${
+                                    seat.rank === 1 ? 'text-emerald-600' : 
+                                    seat.rank === 4 ? 'text-red-500' : 'text-slate-500'
+                                }`}>
+                                    {seat.rank}着
+                                </span>
+                            ) : (
+                                <span className="text-[10px] text-slate-300">-</span>
+                            )}
+                            
+                            {seat.score !== null && seat.score !== undefined ? (
+                                <span className="text-[10px] text-slate-500 font-mono">
+                                    {seat.score.toLocaleString()}
+                                </span>
+                            ) : (
+                                <span className="text-[10px] text-slate-300 font-mono">-</span>
+                            )}
+                        </div>
                        </div>
                      ))}
                    </div>

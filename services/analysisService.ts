@@ -70,8 +70,14 @@ export const calculateAnalysisStats = (games: GameLog[]) => {
   // Let's use Avg Score directly again but strictly for value
   const efficiencyScore = Math.min(100, 50 + (avgScore - 25000) / 500);
 
-  // Luck/Tenacity: Yakitori Avoidance (Target: 90% avoidance -> 10% rate)
-  const luckScore = Math.min(100, 50 + ((10 - yakitoriRate) * 2));
+  // Luck/Tenacity: High Score Count (>= 40000)
+  // New Logic: Based solely on games with score >= 40000
+  
+  // High Score Count: Games with score >= 40000
+  const highScoreCount = games.filter(g => g.score >= 40000).length;
+  const highScoreRate = (highScoreCount / totalGames) * 100;
+  // Target: 30% of games -> 100pts.
+  const luckScore = Math.min(100, highScoreRate * 3.33);
 
   return {
     raw: {
@@ -79,7 +85,8 @@ export const calculateAnalysisStats = (games: GameLog[]) => {
       avgDealIns,
       top2Rate,
       avoidLasRate,
-      yakitoriRate
+      yakitoriRate,
+      highScoreCount
     },
     scores: {
       attack: Math.round(attackScore),
@@ -91,16 +98,8 @@ export const calculateAnalysisStats = (games: GameLog[]) => {
   };
 };
 
-export const getBenchmarkData = (type: 'PRO' | 'AMATEUR' | 'PAST'): AnalysisMetrics => {
+export const getBenchmarkData = (type: 'AMATEUR' | 'PAST'): AnalysisMetrics => {
   switch (type) {
-    case 'PRO':
-      return {
-        attack: 85,
-        defense: 80,
-        stability: 85,
-        efficiency: 90,
-        luck: 60 // Pros can't control luck, but have tenacity
-      };
     case 'AMATEUR':
       return {
         attack: 50,

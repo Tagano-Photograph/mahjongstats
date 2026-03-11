@@ -7,9 +7,17 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const isProd = mode === 'production';
 
+  const deployEnv = env.VITE_DEPLOY_ENV;
+  let base = '/';
+  if (isProd) {
+    base = deployEnv === 'develop'
+      ? '/mahjongstats/develop/'
+      : '/mahjongstats/';
+  }
+
   return {
     // GitHub Pages: https://ORG_NAME.github.io/mahjongstats/
-    base: isProd ? '/mahjongstats/' : '/',
+    base,
     server: {
       port: 3000,
       host: '0.0.0.0',

@@ -10,6 +10,7 @@ export interface GameLog {
   position?: string; // '東' | '南' | '西' | '北'
   dealIns?: number;
   opponents?: string[]; // Array of opponent names
+  opponentDetails?: { name: string; score: number }[]; // Detailed opponent data
   isYakitori?: boolean;
 }
 
